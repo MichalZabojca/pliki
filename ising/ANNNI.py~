@@ -1,0 +1,82 @@
+import numpy as np
+from matplotlib import pyplot as plt
+
+from scipy.sparse.linalg import LinearOperator
+
+from scipy.sparse import identity, diags, csr_matrix, lil_matrix
+from scipy.sparse import kron as skron
+from scipy.sparse import linalg as sla
+from scipy import linalg as la
+from numpy.polynomial.chebyshev import Chebyshev
+from numpy.polynomial.chebyshev import chebinterpolate
+
+
+
+def create_Tz(L, kappa, beta):
+    T = lil_matrix((4**L, 4**L), dtype=float)
+    for i in range(4**L):
+        for j in range(2**L):
+            a = ((i & (~ (2**L-1))) + j)
+
+            a_bin = np.array([int(bin) for bin in format(a, f'0{L+2}b')])
+            i_bin = np.array([int(bin) for bin in format(i, f'0{L+2}b')])
+
+            a_bin = a_bin * 2 - 1
+            i_bin = i_bin * 2 - 1
+
+            T[i, a] = np.exp(- kappa * J * np.sum(a_bin * i_bin))
+
+    return T
+
+
+def create_Tx(L, J, beta, kappa_1):
+    T = lil_matrix((4**L, 4**L), dtype=float)
+    for i in range(2**L):
+        i_bin = np.array([int(bin) for bin in format(i, f'0{L+2}b')]) 
+        i_bin = i_bin * 2 - 1
+
+        for j in range(L):
+            en_hor += - kappa_1 * J * i_bin[j] * i_bin[(j + 1) % L]
+
+        for a in range(2**L):
+            a_bin = np.array([int(bin) for bin in format(a, f'0{L+2}b')])
+            a_bin = a_bin * 2 - 1
+
+            en_vert = - J * np.sum(a_bin * i_bin)
+
+            T[i, a] += np.exp(- beta * (en_hor + en_vert))
+
+
+def update_matrices(L, J, K, kappa, kappa_1, h0, h1, beta):
+    
+    return Dh_1, Dh_2, T_left, T_right, Tzr1_left, Tzr1_right, P, S1, S, C, C1
+
+
+def vector_multiplication(v, L, Dh_1, Dh_2, T_left, T_right, Tzr1_left, Tzr1_right, P, S1, S, C, C1):
+    v = S @ Dh_1 @ v
+    for i in range(int((L-2)/2)):
+        v = P @ T_right @ P @ T_left @ v
+    v = Dh_1 @ S1 @ P @ Tzr1_right @ P @ T_left @ v
+
+    v = S @ Dh_2 @ v
+    for i in range(int((L-2)/2)):
+        v = P @ T_left @ P @ T_right @ v
+    v = Dh_2 @ S1 @ P @ Tzr1_left @ P @ T_right @ v
+
+    return v
+
+
+
+
+
+            
+
+            
+            
+
+
+            
+
+
+
+
