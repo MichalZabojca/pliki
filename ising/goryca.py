@@ -49,22 +49,40 @@ def create_T(L, kappa, kappa_1, K, beta):
     T = lil_matrix((2**L, 2**L), dtype=float)
     for i in range (2**L):
         a = i & (~(1 << (L-1)))
-        print(format(a, f'0{L}b'), format(i, f'0{L}b'))
         a_bin = np.array([int(bin) for bin in format(a, f'0{L}b')])
         i_bin = np.array([int(bin) for bin in format(i, f'0{L}b')])
         
         a_bin = a_bin * 2 - 1
         i_bin = i_bin * 2 - 1
         
-        T[i, a] = np.exp(beta * K * a_bin[0] * i_bin[0] - beta * kappa * K * i_bin[0] * a_bin[-1] - beta * kappa_1 * K * i_bin[0] * a_bin[1])
+        T[i, a] =  np.exp( - beta * K * i_bin[0] * a_bin[0]) #- beta * kappa * K * i_bin[0] * a_bin[-1] - beta * kappa_1 * K * i_bin[0] * a_bin[1])
+        print(i, a)
+        a = a ^ (1 << (L-1))
+        a_bin[0] *= -1
+        print(i, a)
+
+        T[i, a] = np.exp( - beta * K * i_bin[0] * a_bin[0]) #- beta * kappa * K * i_bin[0] * a_bin[-1] - beta * kappa_1 * K * i_bin[0] * a_bin[1])
+        
+    return T
+
+def create_T_single(L, kappa, kappa_1, K, beta):
+    T = lil_matrix((2**L, 2**L), dtype=float)
+    for i in range (2**L):
+        a = i & (~(1 << (L-1)))
+        a_bin = np.array([int(bin) for bin in format(a, f'0{L}b')])
+        i_bin = np.array([int(bin) for bin in format(i, f'0{L}b')])
+        
+        a_bin = a_bin * 2 - 1
+        i_bin = i_bin * 2 - 1
+        
+        T[i, a] =  np.exp(beta * K * a_bin[0] * i_bin[0])
 
         a = a ^ (1 << (L-1))
         a_bin[0] *= -1
         
-        T[i, a] = np.exp(beta * K * a_bin[0] * i_bin[0] - beta * kappa * K * i_bin[0] * a_bin[-1] - beta * kappa_1 * K * i_bin[0] * a_bin[1])
-        
-    return T
+        T[i, a] = np.exp(beta * K * a_bin[0] * i_bin[0])
 
+    return T
 
 def cyclic_shift(L):
     P = lil_matrix((2**(L), 2**(L)))
@@ -74,17 +92,28 @@ def cyclic_shift(L):
         P[a, i] = 1
     return P
 
+def reverse_cyclic_shift(L):
+    P = lil_matrix((2**L, 2**L))
+    for i in range(2**L):
+        a = (i >> 1) + ((i & 1) << (L - 1))
+        P[a, i] = 1
+    return P
+
+        
+
 fmt = 'csr'
 L = 4
 T = create_T(L, 1, 1, 1, 1)
+T_single = create_T_single(L, 1, 1, 1, 1)
 P = cyclic_shift(L)
-
+P1 = reverse_cyclic_shift(L) 
 
 Trans = identity(2**L, format = fmt) 
-for i in range(int((L-2)/2)):
-    Ttmp = P @ P @ T @ Trans
+
+for i in range(L-1):
+    Ttmp = P @ T @ Trans
     Trans = Ttmp
-
+Trans = P1 @ Trans
+print(Trans.todense())
 print(np.allclose(Trans.todense(), Trans.T.todense()))
-
 
