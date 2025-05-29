@@ -265,6 +265,15 @@ def vector_multiplication(v, L, Dh_1, Dh_2, T_left, T_right, Tzr1_left, Tzr1_rig
     return v
 
 
+def reverse(L):
+    P = lil_matrix((2**L, 2**L))
+    for i in range(2**L):
+        b = '{:0{width}b}'.format(i, width = L) 
+        a = int(b[::-1], 2)
+        P[a, i] = 1
+    return P
+
+R = reverse(L)
 
 Trans = identity(2**(L+2), format = fmt) 
 for i in range(int((L-2)/2)):
@@ -283,7 +292,9 @@ T_layer_2 = Dh_1 @ S1 @ P @ Tzr1_left @ P @ T_right @ Trans @ S @ Dh_2
 
 C = cyclic_1bit_shift(L)
 C1 = cyclic_1bit_shift_reverse(L)
-Trans_final = T_layer_2 @ T_layer_1 @ C @ C
+Trans_final = C1 @ R @ T_layer_1 @ R @ C @ T_layer_1 @ C1 @ R
+
+
 print(np.allclose((Trans_final).todense(), (Trans_final).todense().T))
 
 
