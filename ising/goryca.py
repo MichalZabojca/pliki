@@ -130,9 +130,9 @@ def reverse(L):
 
 fmt = 'csr'
 L = 6
-kappa = 1
-kappa_1 = 1
-K = 1
+kappa = 0.4
+kappa_1 = 0.5
+K = 0.7
 beta = 1
 T = create_T(L, kappa, kappa_1, K, beta)
 T_single = create_T_single(L, kappa, kappa_1, K, beta)
@@ -154,4 +154,32 @@ Trans = Dh_2 @ P @ T_single @ P1 @ Trans @ Dh_2
 T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta)
 
 print(np.allclose(Trans.todense(), T_reference))
+
+
+
+
+def update_matrices(L, kappa, kappa_1, K, beta):
+    T = create_T(L, kappa, kappa_1, K, beta)
+    T_single = create_T_single(L, kappa, kappa_1, K, beta)
+    Dh_2 = horizontal(L, kappa, kappa_1, K, beta)
+    P = cyclic_shift(L)
+    P1 = reverse_cyclic_shift(L) 
+    R = reverse(L)
+        
+    Trans_2_site = T_single @ P1 @ T
+
+    return T, T_single, Dh_2, P, P1, R, Trans_2_site
+
+
+
+def vector_multiplication(v, L, T, T_single, Dh_2, P, P1, R, Trans_2_site):
+    v = Dh_2 @ v
+
+    for i in range(int(L/2-1)):
+        v = P @ P @ P @ Trans_2_site @ v
+    
+    v = Dh_2 @ P @ T_single @ P1 @ v
+
+    return v
+    
 

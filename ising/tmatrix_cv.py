@@ -17,7 +17,7 @@ from szachownica import vector_multiplication, update_matrices
 L = 4
 J = 1
 K = 1
-kappa = 0.6
+kappa = 1
 kappa_1 = 1
 h0 = 0
 h1 = 0
@@ -26,7 +26,7 @@ def calculate_f(temp, L, k):
     beta = 1/(k*temp)
     matrices = update_matrices(L, J, K, kappa, kappa_1, h0, h1, beta)
     Transfer_matrix = sla.LinearOperator((2**L, 2**L), matvec = lambda v: vector_multiplication(v, L, *matrices))
-    return k*temp*np.log(sla.eigsh(Transfer_matrix, k=1, return_eigenvectors = False))
+    return k*temp*np.log(sla.eigs(Transfer_matrix, k=1, return_eigenvectors = False)[0])
 
 def calculate_f_array(temp, L, k):
     f = np.zeros(temp.size)
