@@ -48,20 +48,19 @@
         http://local-ip-address:9080/
         subst w: \\ESPWebDAV.local@9080/DavWWWRoot
 */
-
+#include "esp_vfs_fat.h"
+#include "sdmmc_cmd.h"
+#include "driver/sdmmc_host.h"
 #include <WiFi.h>
 #include <ESPmDNS.h>
-//#include <SPIFFS.h>
-//#include <LITTLEFS.h>
 #include <SPI.h>
 #include <SD.h>
 #include <ESPWebDAV.h>
 FS &gfs = SD;
 #define HOSTNAME    "ESPWebDAV"
-
 #ifndef STASSID
-#define STASSID "cebit-swiatlowod-0048"
-#define STAPSK "27410953$#"
+#define STASSID "PLAY_Swiatlowodowy_20CB"
+#define STAPSK "8AfGdF8q5K@X"
 #endif
 
 #define FILESYSTEM SD
@@ -98,7 +97,6 @@ void setup()
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
-        Serial.print(".");
     }
 
     Serial.println("");
@@ -107,6 +105,7 @@ void setup()
     Serial.print("RSSI: "); Serial.println(WiFi.RSSI());
 
     MDNS.begin(HOSTNAME);
+    /*
     if (!FILESYSTEM.begin(5)) {
         Serial.println("Failed to mount SD");
         while (1) delay(1000);
@@ -119,6 +118,41 @@ void setup()
     });
 
     Serial.println("WebDAV server started");
+    */
+    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+    sdmmc_card_t* card;
+    const char mount_point[] = "/sdcard";
+    slot_config.width = 1;
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+            .format_if_mount_failed = false,
+            .max_files = 5,
+            .allocation_unit_size = 16 * 1024
+    };
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    //host.flags = SDMMC_HOST_FLAG_4BIT;
+    Serial.println("Mounting filesystem");
+    esp_err_t ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            Serial.println("Failed to mount filesystem.");
+        } 
+        else {
+            Serial.println("Failed to initialize the card (%s)."
+                     "Make sure SD card lines have pull-up resistors in place.");
+    /*
+    #ifdef CONFIG_EXAMPLE_DEBUG_PIN_CONNECTIONS
+            check_sd_card_pins(&config, pin_count);
+    #endif
+    */  
+        }
+        return;
+    }
+    Serial.println("Filesystem mounted");
+
+    sdmmc_card_print_info(stdout, card);
+    
+
 }
 
 void help()
