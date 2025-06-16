@@ -129,10 +129,10 @@ def reverse(L):
     
 
 fmt = 'csr'
-L = 6
-kappa = 0.4
-kappa_1 = 0.5
-K = 0.7
+L = 4
+kappa = 1
+kappa_1 = 1
+K = 1
 beta = 1
 T = create_T(L, kappa, kappa_1, K, beta)
 T_single = create_T_single(L, kappa, kappa_1, K, beta)
@@ -153,7 +153,7 @@ Trans = Dh_2 @ P @ T_single @ P1 @ Trans @ Dh_2
 
 T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta)
 
-print(np.allclose(Trans.todense(), T_reference))
+print(np.allclose(Trans.todense(), Trans.T.todense()))
 
 
 

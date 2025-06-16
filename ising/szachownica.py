@@ -222,10 +222,12 @@ kappa = 0.8
 beta = 1
 kappa_1 = 0.6
 
-B = 0
+B = 0.5
 phi = np.pi/8
 h0 = np.cos(phi) * B
 h1 = np.sin(phi) * B
+h0 = 0.5
+h1 = 0.5
 
 Dh_1 = Dhalf_horizontal_TM(L, J, beta, h0, h1, pbc=True, fmt='csr')
 Dh_2 = Dhalf_horizontal_TM(L, J, beta, h1, h0, pbc=True, fmt='csr')
@@ -296,7 +298,8 @@ Trans_final = C1 @ R @ T_layer_1 @ R @ C @ T_layer_1 @ C1 @ R
 
 
 print(np.allclose((Trans_final).todense(), (Trans_final).todense().T))
-
+print(np.allclose((T_layer_1).todense(), (T_layer_1).todense().T))
+print(Dh_2.todense())
 
 
 '''
