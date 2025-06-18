@@ -10,7 +10,7 @@ from numpy.polynomial.chebyshev import Chebyshev
 from numpy.polynomial.chebyshev import chebinterpolate
 
 
-def construct_transfer_matrix(L, K, kappa, kappa_1, beta):
+def construct_transfer_matrix(L, K, kappa, kappa_1, beta, h):
     # Generate all possible spin states for L spins
     states = np.array([list(format(i, f'0{L}b')) for i in range(2 ** L)], dtype=int)
     
@@ -27,6 +27,9 @@ def construct_transfer_matrix(L, K, kappa, kappa_1, beta):
             energy = 0.0
             # Nearest neighbor (horizontal) terms between old and new spins
             for k in range(L): 
+
+                energy += - h * (snew[k] + sold[k])/2
+
                 if (k % 2 == 1):
                     energy += (K * snew[k] * snew[(k+1) % L] + kappa * K * snew[k] * snew[(k + 2) % L]) / 2
                     energy += (K * sold[k] * sold[(k+1) % L] + kappa * K * sold[k] * sold[(k + 2) % L]) / 2
@@ -50,13 +53,16 @@ def construct_transfer_matrix(L, K, kappa, kappa_1, beta):
     return T
 
 
-def horizontal(L, kappa, kappa_1, K, beta):
+def horizontal(L, kappa, kappa_1, K, beta, h):
     T = lil_matrix((2**L, 2**L), dtype=float)
     for a in range(2**L):
         a_bin = np.array([int(bin) for bin in format(a, f'0{L}b')])
         a_bin = a_bin * 2 - 1
         en = 0
         for j in range(L):
+            
+            en += - h * a_bin[j]
+
             if (j % 2 == 1):
                 en += beta * K * a_bin[j] * a_bin[(j + 1) % L] + kappa * beta * K * a_bin[j] * a_bin[(j + 2) % L]
             if (j % 2 == 0):
@@ -134,9 +140,10 @@ kappa = 1
 kappa_1 = 1
 K = 1
 beta = 1
+h = 1 
 T = create_T(L, kappa, kappa_1, K, beta)
 T_single = create_T_single(L, kappa, kappa_1, K, beta)
-Dh_2 = horizontal(L, kappa, kappa_1, K, beta)
+Dh_2 = horizontal(L, kappa, kappa_1, K, beta, h)
 P = cyclic_shift(L)
 P1 = reverse_cyclic_shift(L) 
 R = reverse(L)
@@ -151,17 +158,17 @@ for i in range(int(L / 2 - 1)):
 
 Trans = Dh_2 @ P @ T_single @ P1 @ Trans @ Dh_2
 
-T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta)
+T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta, h)
 
-print(np.allclose(Trans.todense(), Trans.T.todense()))
-
-
+print(np.allclose(Trans.todense(), T_reference))
 
 
-def update_matrices(L, kappa, kappa_1, K, beta):
+
+
+def update_matrices(L, kappa, kappa_1, K, beta, h):
     T = create_T(L, kappa, kappa_1, K, beta)
     T_single = create_T_single(L, kappa, kappa_1, K, beta)
-    Dh_2 = horizontal(L, kappa, kappa_1, K, beta)
+    Dh_2 = horizontal(L, kappa, kappa_1, K, beta, h)
     P = cyclic_shift(L)
     P1 = reverse_cyclic_shift(L) 
     R = reverse(L)

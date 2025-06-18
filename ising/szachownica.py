@@ -222,12 +222,12 @@ kappa = 0.8
 beta = 1
 kappa_1 = 0.6
 
-B = 0.5
+B = 1
 phi = np.pi/8
 h0 = np.cos(phi) * B
 h1 = np.sin(phi) * B
 h0 = 0.5
-h1 = 0.5
+h1 = 0.3
 
 Dh_1 = Dhalf_horizontal_TM(L, J, beta, h0, h1, pbc=True, fmt='csr')
 Dh_2 = Dhalf_horizontal_TM(L, J, beta, h1, h0, pbc=True, fmt='csr')
@@ -277,12 +277,12 @@ def reverse(L):
 
 R = reverse(L)
 
-Trans = identity(2**(L+2), format = fmt) 
+Trans_1 = identity(2**(L+2), format = fmt) 
 for i in range(int((L-2)/2)):
-    Ttmp = P @ T_right @ P @ T_left @ Trans
-    Trans = Ttmp
+    Ttmp = P @ T_right @ P @ T_left @ Trans_1
+    Trans_1 = Ttmp
 
-T_layer_1 = Dh_2 @ S1 @ P @ Tzr1_right @ P @ T_left @ Trans @ S @ Dh_1
+T_layer_1 = Dh_2 @ S1 @ P @ Tzr1_right @ P @ T_left @ Trans_1 @ S @ Dh_1
 
 
 Trans = identity(2**(L+2), format = fmt)
@@ -296,10 +296,9 @@ C = cyclic_1bit_shift(L)
 C1 = cyclic_1bit_shift_reverse(L)
 Trans_final = C1 @ R @ T_layer_1 @ R @ C @ T_layer_1 @ C1 @ R
 
-
-print(np.allclose((Trans_final).todense(), (Trans_final).todense().T))
-print(np.allclose((T_layer_1).todense(), (T_layer_1).todense().T))
-print(Dh_2.todense())
+print(np.allclose((R @ T_layer_1).todense(), (T_layer_1 @ R).todense().T))
+print(np.allclose(Dh_2.todense(), Dh_1.todense()))
+print(Trans_final.todense())
 
 
 '''
