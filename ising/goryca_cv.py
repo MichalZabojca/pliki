@@ -14,16 +14,17 @@ from scipy import special
 
 from goryca import vector_multiplication, update_matrices
 
-L = 8
+L = 16
 J = 1
 K = 1
-kappa = 1
-kappa_1 = 1
-h = 1
+kappa = 1/1.8
+kappa_1 = 0
+h = 0
+h1 = 0
 
 def calculate_f(temp, L, k):
     beta = 1/(k*temp)
-    matrices = update_matrices(L, kappa, kappa_1, K, beta, h)
+    matrices = update_matrices(L, kappa, kappa_1, K, beta, h, h1)
     Transfer_matrix = sla.LinearOperator((2**L, 2**L), matvec = lambda v: vector_multiplication(v, L, *matrices))
     return k*temp*np.log(sla.eigs(Transfer_matrix, k=1, return_eigenvectors = False)[0])
 
@@ -31,15 +32,15 @@ def calculate_f_array(temp, L, k):
     f = np.zeros(temp.size)
     for i in range(temp.size):
         beta = 1/(k*temp[i])
-        matrices = update_matrices(L, kappa, kappa_1, K, beta, h)
+        matrices = update_matrices(L, kappa, kappa_1, K, beta, h, h1)
         Transfer_matrix = sla.LinearOperator((2**L, 2**L), matvec = lambda v: vector_multiplication(v, L, *matrices))
         f[i] = k*temp[i]*np.log(sla.eigs(Transfer_matrix, k=1, return_eigenvectors = False)[0])
     return f
 
 k=1
-n = 100
+n = 10
 start = 0.5
-end = 2
+end = 3
 temps = np.linspace(start, end, n)
 
 f = np.zeros(temps.size)

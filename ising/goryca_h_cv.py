@@ -12,51 +12,104 @@ from numpy.polynomial.chebyshev import chebinterpolate
 
 from scipy import special
 
-from goryca import vector_multiplication, update_matrices
+from goryca import vector_multiplication, update_matrices, update_H, horizontal_h, horizontal_h1
 
 
-L = 8
+L = 4
 J = 1
 K = 1
-kappa = 0.5
-kappa_1 = 0.2
-h = 1
+kappa = 0.6
+kappa_1 = 0
 
 
 fig_mag = plt.figure(dpi = 200)
 wyk = fig_mag.add_subplot(111)
 
-temp = 2.1
+temp = 20
 k = 1
-n = 100
-start = 0
-end = 5
-mag = np.linspace(start, end, n)
-f = np.zeros(mag.size)
+n = 10
+start = -2
+end = 2
+hy = np.linspace(start, end, n)
+hx = np.linspace(start, end, n)
+
+f = np.zeros(shape = (n, n))
 beta = 1/(k * temp)
 
 
-def calculate_f(mag, L, k, temp):
+def calculate_f(hx, hy, L, k, temp):
     beta = 1/(k * temp)
-    matrices = update_matrices(L, kappa, kappa_1, K, beta, mag)
+    matrices = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)
     Transfer_matrix = sla.LinearOperator((2**L, 2**L), matvec = lambda v: vector_multiplication(v, L, *matrices))
     return k*temp*np.log(sla.eigs(Transfer_matrix, k=1, return_eigenvectors = False)[0])
 
-for i in range(mag.size):
+def calculate_f_update_h(matrices, h_matrices, L, temp):
+    Transfer_matrix = sla.LinearOperator((2**L, 2**L), matvec = lambda v: vector_multiplication(v, L, *matrices, *h_matrices))
+    return k*temp*np.log(sla.eigs(Transfer_matrix, k=1, return_eigenvectors = False)[0]) 
+
+'''
+for i in range(n):
+    for j in range(n):
+        print(i, j)
+        f[i, j] = calculate_f(hy[i], hx[j], L, k, temp)
+'''
+
+
+n = 100
+cv = np.zeros(n)
+f = np.zeros(n)
+u = np.zeros(n)
+start = -10
+stop = 10
+h = np.linspace(start, stop, n)
+temp = 1.8
+dt = 0.01
+
+hx= h[0]
+hy= h[0]
+
+beta = 1/(k*temp)
+matrices = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+h_matrices = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
+
+beta = 1/(k*(temp+dt))
+matrices_dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+h_matrices_dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
+
+beta = 1/(k*(temp+2*dt))
+matrices_2dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+h_matrices_2dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
+
+
+hx_old = h[0]
+hy_old = h[0]
+
+
+for i in range(n):
     print(i)
-    f[i] = calculate_f(mag[i], L, k, temp)
+    hx = h[i]
+    hy = h[i]
+    
+    h_matrices = update_H(*h_matrices, hx, hy, hx_old, hy_old, L)
+    h_matrices_dt = update_H(*h_matrices_dt, hx, hy, hx_old, hy_old, L)
+    h_matrices_2dt = update_H(*h_matrices_2dt, hx, hy, hx_old, hy_old, L)
+    f[i] = calculate_f_update_h(matrices, h_matrices, L, temp)
+    print("h_matrices_updated")
 
+    der_low = (calculate_f_update_h(matrices_dt, h_matrices_dt, L, temp + dt) - f[i]) / dt
+    der_high = (calculate_f_update_h(matrices_2dt, h_matrices_2dt, L, temp + 2 * dt) - calculate_f_update_h(matrices_dt, h_matrices_dt,  L, temp + dt))/dt 
+    u[i] = der_low
+    cv[i] = (der_high - der_low)/dt
+    print("cv_calculated")
 
-wyk.plot(mag, f)
+    hx_old = hx
+    hy_old = hy
+    
 
-kappa = 1
-kappa_1 = 1
-temp = 10
+    
 
-for i in range(mag.size):
-    print(i)
-    f[i] = calculate_f(mag[i], L, k, temp)
+wyk.plot(h * 2, cv)
+wyk.plot(h * 2, u)
 
-wyk.plot(mag, f)
 
 plt.show()

@@ -10,7 +10,7 @@ from numpy.polynomial.chebyshev import Chebyshev
 from numpy.polynomial.chebyshev import chebinterpolate
 
 
-def construct_transfer_matrix(L, K, kappa, kappa_1, beta, h):
+def construct_transfer_matrix(L, K, kappa, kappa_1, beta, h, h1):
     # Generate all possible spin states for L spins
     states = np.array([list(format(i, f'0{L}b')) for i in range(2 ** L)], dtype=int)
     
@@ -28,12 +28,13 @@ def construct_transfer_matrix(L, K, kappa, kappa_1, beta, h):
             # Nearest neighbor (horizontal) terms between old and new spins
             for k in range(L): 
 
-                energy += - h * (snew[k] + sold[k])/2
 
                 if (k % 2 == 1):
+                    energy += - h * (snew[k] + sold[k])/2
                     energy += (K * snew[k] * snew[(k+1) % L] + kappa * K * snew[k] * snew[(k + 2) % L]) / 2
                     energy += (K * sold[k] * sold[(k+1) % L] + kappa * K * sold[k] * sold[(k + 2) % L]) / 2
                 if (k % 2 == 0):
+                    energy += - h1 * (snew[k] + sold[k])/2
                     energy += (snew[k] * snew[(k+1) % L] + kappa_1 * K * snew[k] * snew[(k + 2) % L]) / 2
                     energy += (sold[k] * sold[(k+1) % L] + kappa_1 * K * sold[k] * sold[(k + 2) % L]) / 2
 
@@ -53,16 +54,33 @@ def construct_transfer_matrix(L, K, kappa, kappa_1, beta, h):
     return T
 
 
-def horizontal(L, kappa, kappa_1, K, beta, h):
+def horizontal(L, kappa, kappa_1, K, beta, h, h1):
     T = lil_matrix((2**L, 2**L), dtype=float)
     for a in range(2**L):
         a_bin = np.array([int(bin) for bin in format(a, f'0{L}b')])
         a_bin = a_bin * 2 - 1
         en = 0
         for j in range(L):
-            
-            en += - h * a_bin[j]
+            if (j % 2 == 1):
+                en += -h * a_bin[j]
+                en += beta * K * a_bin[j] * a_bin[(j + 1) % L] + kappa * beta * K * a_bin[j] * a_bin[(j + 2) % L]
+            if (j % 2 == 0):
+                en += -h1 * a_bin[j]
+                en += beta * a_bin[j] * a_bin[(j + 1) % L] + kappa_1 * beta * K * a_bin[j] * a_bin[(j + 2) % L]
+        T[a, a] = np.exp(-en / 2)
 
+    return T
+
+
+
+
+def horizontal_v2(L, kappa, kappa_1, K, beta, h, h1):
+    T = lil_matrix((2**L, 2**L), dtype=float)
+    for a in range(2**L):
+        a_bin = np.array([int(bin) for bin in format(a, f'0{L}b')])
+        a_bin = a_bin * 2 - 1
+        en = 0
+        for j in range(L):
             if (j % 2 == 1):
                 en += beta * K * a_bin[j] * a_bin[(j + 1) % L] + kappa * beta * K * a_bin[j] * a_bin[(j + 2) % L]
             if (j % 2 == 0):
@@ -71,7 +89,31 @@ def horizontal(L, kappa, kappa_1, K, beta, h):
 
     return T
 
+def horizontal_h(L, beta, h, h1):
+    T = lil_matrix((2**L, 2**L), dtype=float)
+    for a in range(2**L):
+        a_bin = np.array([int(bin) for bin in format(a, f'0{L}b')])
+        a_bin = a_bin * 2 - 1
+        en = 0
+        for j in range(L):
+            if (j % 2 == 1):
+                en += - h * a_bin[j]
 
+        T[a, a] = np.exp(- en / 2)
+    return T
+
+def horizontal_h1(L, beta, h, h1):
+    T = lil_matrix((2**L, 2**L), dtype=float)
+    for a in range(2**L):
+        a_bin = np.array([int(bin) for bin in format(a, f'0{L}b')])
+        a_bin = a_bin * 2 - 1
+        en = 0
+        for j in range(L):
+            if (j % 2 == 0):
+                en += - h1 * a_bin[j]
+
+        T[a, a] = np.exp(- en / 2)
+    return T
 
 def create_T(L, kappa, kappa_1, K, beta):
     T = lil_matrix((2**L, 2**L), dtype=float)
@@ -132,61 +174,112 @@ def reverse(L):
         a = int(b[::-1], 2)
         P[a, i] = 1
     return P
-    
 
+    
 fmt = 'csr'
-L = 4
+L = 10
 kappa = 1
-kappa_1 = 1
+kappa_1 = 0.6
 K = 1
 beta = 1
-h = 1 
+
+
+B = 1
+phi = np.pi/4
+h = B * np.sin(phi) 
+h1 = B * np.cos(phi) 
+
+
+H = horizontal(L, kappa, kappa_1, K, beta, h, h1)
+
+H1 = horizontal_v2(L, kappa, kappa_1, K, beta, h, h1)
+
+H_h = horizontal_h(L, beta,  h, h1)
+H_h1 = horizontal_h1(L, beta,  h, h1)
+
+print(np.allclose(H.todense(), (H_h @ H_h1 @ H1).todense()))
+
+'''
+
 T = create_T(L, kappa, kappa_1, K, beta)
+print("created T")
 T_single = create_T_single(L, kappa, kappa_1, K, beta)
-Dh_2 = horizontal(L, kappa, kappa_1, K, beta, h)
+print("created T_single")
+Dh_2 = horizontal(L, kappa, kappa_1, K, beta, h, h1)
+print("created Dh")
 P = cyclic_shift(L)
+print("created P")
 P1 = reverse_cyclic_shift(L) 
+print("created P1")
 R = reverse(L)
+print("created R")
 
 Trans_2_site = T_single @ P1 @ T
 Trans = identity(2**L, format = fmt) 
 Trans = P @ P @ T @ Trans
+print("before for loop")
 
 for i in range(int(L / 2 - 1)):
+    print(i)
     Ttmp = P @ P @ P @ Trans_2_site @ Trans
     Trans = Ttmp
 
+print("after for loop")
+
 Trans = Dh_2 @ P @ T_single @ P1 @ Trans @ Dh_2
 
-T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta, h)
+#T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta, h, h1)
 
-print(np.allclose(Trans.todense(), T_reference))
+print("created Trans")
+'''
 
 
 
 
-def update_matrices(L, kappa, kappa_1, K, beta, h):
+def update_matrices(L, kappa, kappa_1, K, beta, h, h1):
+    print("update_start")
     T = create_T(L, kappa, kappa_1, K, beta)
+    print("created T")
     T_single = create_T_single(L, kappa, kappa_1, K, beta)
-    Dh_2 = horizontal(L, kappa, kappa_1, K, beta, h)
+    print("created T_single")
+    Dh_2 = horizontal_v2(L, kappa, kappa_1, K, beta, h, h1)
+    print("created Dh")
+    H_h = horizontal_h(L, beta, h, h1)
+    print("created H_h")
+    H_h1 = horizontal_h1(L, beta, h, h1)
+    print("created H_h1")
     P = cyclic_shift(L)
+    print("created P")
     P1 = reverse_cyclic_shift(L) 
+    print("created P1")
     R = reverse(L)
+    print("created R")
         
     Trans_2_site = T_single @ P1 @ T
+    print("update_end")
+    return T, T_single, Dh_2, P, P1, R, Trans_2_site, H_h, H_h1
 
-    return T, T_single, Dh_2, P, P1, R, Trans_2_site
 
 
-
-def vector_multiplication(v, L, T, T_single, Dh_2, P, P1, R, Trans_2_site):
-    v = Dh_2 @ v
+def vector_multiplication(v, L, T, T_single, Dh_2, P, P1, R, Trans_2_site, H_h, H_h1):
+    v = H_h1 @ H_h @ Dh_2 @ v
 
     for i in range(int(L/2-1)):
         v = P @ P @ P @ Trans_2_site @ v
     
-    v = Dh_2 @ P @ T_single @ P1 @ v
+    v = H_h1 @ H_h @ Dh_2 @ P @ T_single @ P1 @ v
 
     return v
+
+
+def update_H(H_h, H_h1, new_h, new_h1, old_h, old_h1, L):
+    '''
+    H_h = np.power(H_h, new_h/old_h)
+    H_h1 = np.power(H_h1, new_h1/old_h1)
+    '''
+    for i in range(2**L):
+        H_h[i, i] = np.power(H_h[i, i], new_h/old_h)
+        H_h1[i, i] = np.power(H_h1[i, i], new_h1/old_h1)
+    return H_h, H_h1
+
     
-lallalalalalala
