@@ -14,12 +14,12 @@ from scipy import special
 
 from goryca import vector_multiplication, update_matrices
 
-L = 16
+L = 4
 J = 1
 K = 1
-kappa = 1/1.8
+kappa = 0
 kappa_1 = 0
-h = 0
+h = 50
 h1 = 0
 
 def calculate_f(temp, L, k):
@@ -28,7 +28,7 @@ def calculate_f(temp, L, k):
     Transfer_matrix = sla.LinearOperator((2**L, 2**L), matvec = lambda v: vector_multiplication(v, L, *matrices))
     return k*temp*np.log(sla.eigs(Transfer_matrix, k=1, return_eigenvectors = False)[0])
 
-def calculate_f_array(temp, L, k):
+def calculate_f_array(temp, L, k, h):
     f = np.zeros(temp.size)
     for i in range(temp.size):
         beta = 1/(k*temp[i])
@@ -38,9 +38,9 @@ def calculate_f_array(temp, L, k):
     return f
 
 k=1
-n = 10
-start = 0.5
-end = 3
+n = 30
+start = 0.9
+end = 10
 temps = np.linspace(start, end, n)
 
 f = np.zeros(temps.size)
@@ -54,9 +54,11 @@ wyk = fig.add_subplot(121)
 wyk_cv = fig.add_subplot(122)
 wyk.plot(temps, f)
 
-cheb = Chebyshev.interpolate(calculate_f_array, 30, domain = [start, end],args = (L, k))
-cheb_der = cheb.deriv(2)
-cv_cheb = cheb_der.linspace(n, [start, end])
-wyk_cv.plot(cv_cheb[0], cv_cheb[1])
+h_array = [0, 1, 2, 3, 5, 10]
+for i in h_array:
+    cheb = Chebyshev.interpolate(calculate_f_array, 30, domain = [start, end],args = (L, k, i))
+    cheb_der = cheb.deriv(2)
+    cv_cheb = cheb_der.linspace(n, [start, end])
+    wyk_cv.plot(cv_cheb[0], cv_cheb[1])
 
 plt.show()

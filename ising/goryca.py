@@ -62,10 +62,10 @@ def horizontal(L, kappa, kappa_1, K, beta, h, h1):
         en = 0
         for j in range(L):
             if (j % 2 == 1):
-                en += -h * a_bin[j]
+                en += -beta * h * a_bin[j]
                 en += beta * K * a_bin[j] * a_bin[(j + 1) % L] + kappa * beta * K * a_bin[j] * a_bin[(j + 2) % L]
             if (j % 2 == 0):
-                en += -h1 * a_bin[j]
+                en += - beta * h1 * a_bin[j]
                 en += beta * a_bin[j] * a_bin[(j + 1) % L] + kappa_1 * beta * K * a_bin[j] * a_bin[(j + 2) % L]
         T[a, a] = np.exp(-en / 2)
 
@@ -82,10 +82,10 @@ def horizontal_v2(L, kappa, kappa_1, K, beta, h, h1):
         en = 0
         for j in range(L):
             if (j % 2 == 1):
-                en += beta * K * a_bin[j] * a_bin[(j + 1) % L] + kappa * beta * K * a_bin[j] * a_bin[(j + 2) % L]
+                en += K * a_bin[j] * a_bin[(j + 1) % L] + kappa * K * a_bin[j] * a_bin[(j + 2) % L]
             if (j % 2 == 0):
-                en += beta * a_bin[j] * a_bin[(j + 1) % L] + kappa_1 * beta * K * a_bin[j] * a_bin[(j + 2) % L]
-        T[a, a] = np.exp(-en / 2)
+                en += a_bin[j] * a_bin[(j + 1) % L] + kappa_1 * K * a_bin[j] * a_bin[(j + 2) % L]
+        T[a, a] = np.exp(- beta * en / 2)
 
     return T
 
@@ -99,7 +99,7 @@ def horizontal_h(L, beta, h, h1):
             if (j % 2 == 1):
                 en += - h * a_bin[j]
 
-        T[a, a] = np.exp(- en / 2)
+        T[a, a] = np.exp(-beta * en / 2)
     return T
 
 def horizontal_h1(L, beta, h, h1):
@@ -112,7 +112,7 @@ def horizontal_h1(L, beta, h, h1):
             if (j % 2 == 0):
                 en += - h1 * a_bin[j]
 
-        T[a, a] = np.exp(- en / 2)
+        T[a, a] = np.exp(-beta * en / 2)
     return T
 
 def create_T(L, kappa, kappa_1, K, beta):
@@ -177,36 +177,30 @@ def reverse(L):
 
     
 fmt = 'csr'
-L = 10
-kappa = 1
-kappa_1 = 0.6
-K = 1
-beta = 1
+L = 4 
+kappa = 0.6
+kappa_1 = 0.5
+K = 1.1
+beta = 1.8
 
 
 B = 1
 phi = np.pi/4
-h = B * np.sin(phi) 
-h1 = B * np.cos(phi) 
+h = 3
+h1 = -4
 
 
-H = horizontal(L, kappa, kappa_1, K, beta, h, h1)
 
-H1 = horizontal_v2(L, kappa, kappa_1, K, beta, h, h1)
-
-H_h = horizontal_h(L, beta,  h, h1)
-H_h1 = horizontal_h1(L, beta,  h, h1)
-
-print(np.allclose(H.todense(), (H_h @ H_h1 @ H1).todense()))
-
-'''
 
 T = create_T(L, kappa, kappa_1, K, beta)
 print("created T")
 T_single = create_T_single(L, kappa, kappa_1, K, beta)
 print("created T_single")
-Dh_2 = horizontal(L, kappa, kappa_1, K, beta, h, h1)
+Dh_2 = horizontal_v2(L, kappa, kappa_1, K, beta, h, h1)
 print("created Dh")
+H = horizontal_h(L, beta, h, h1)
+H1 = horizontal_h1(L, beta, h, h1)
+print("created_H")
 P = cyclic_shift(L)
 print("created P")
 P1 = reverse_cyclic_shift(L) 
@@ -226,14 +220,15 @@ for i in range(int(L / 2 - 1)):
 
 print("after for loop")
 
-Trans = Dh_2 @ P @ T_single @ P1 @ Trans @ Dh_2
+Trans = H1 @ H @ Dh_2 @ P @ T_single @ P1 @ Trans @ H1 @ H @ Dh_2
 
-#T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta, h, h1)
+T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta, h, h1)
 
 print("created Trans")
-'''
 
+print(np.allclose(T_reference, Trans.todense()))
 
+#print(T_reference, "\n", Trans.todense())
 
 
 def update_matrices(L, kappa, kappa_1, K, beta, h, h1):
@@ -264,6 +259,8 @@ def update_matrices(L, kappa, kappa_1, K, beta, h, h1):
 def vector_multiplication(v, L, T, T_single, Dh_2, P, P1, R, Trans_2_site, H_h, H_h1):
     v = H_h1 @ H_h @ Dh_2 @ v
 
+    v = P @ P @ T @ v
+
     for i in range(int(L/2-1)):
         v = P @ P @ P @ Trans_2_site @ v
     
@@ -282,4 +279,9 @@ def update_H(H_h, H_h1, new_h, new_h1, old_h, old_h1, L):
         H_h1[i, i] = np.power(H_h1[i, i], new_h1/old_h1)
     return H_h, H_h1
 
-    
+
+v = np.zeros(2 ** L)
+for i in range(2 ** L):
+    v[i] = i
+
+print(np.allclose(vector_multiplication(v, L, T, T_single, Dh_2, P, P1, R, Trans_2_site, H, H1), T_reference @ v))

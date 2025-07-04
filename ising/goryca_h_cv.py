@@ -18,7 +18,7 @@ from goryca import vector_multiplication, update_matrices, update_H, horizontal_
 L = 4
 J = 1
 K = 1
-kappa = 0.6
+kappa = 0
 kappa_1 = 0
 
 
@@ -54,62 +54,123 @@ for i in range(n):
         f[i, j] = calculate_f(hy[i], hx[j], L, k, temp)
 '''
 
+def plot_cv(temp):
+    n = 30
+    cv = np.zeros(n)
+    f = np.zeros(n)
+    u = np.zeros(n)
+    start = -20
+    stop = 20
+    h = np.linspace(start, stop, n)
+    dt = 0.05
 
-n = 100
-cv = np.zeros(n)
-f = np.zeros(n)
-u = np.zeros(n)
-start = -10
-stop = 10
-h = np.linspace(start, stop, n)
-temp = 1.8
-dt = 0.01
+    hx= h[0]
+    hy= h[0]
 
-hx= h[0]
-hy= h[0]
+    beta = 1/(k*temp)
+    matrices = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+    h_matrices = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
 
-beta = 1/(k*temp)
-matrices = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
-h_matrices = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
+    beta = 1/(k*(temp+dt))
+    matrices_dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+    h_matrices_dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
 
-beta = 1/(k*(temp+dt))
-matrices_dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
-h_matrices_dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
-
-beta = 1/(k*(temp+2*dt))
-matrices_2dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
-h_matrices_2dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
-
-
-hx_old = h[0]
-hy_old = h[0]
+    beta = 1/(k*(temp+2*dt))
+    matrices_2dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+    h_matrices_2dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
 
 
-for i in range(n):
-    print(i)
-    hx = h[i]
-    hy = h[i]
-    
-    h_matrices = update_H(*h_matrices, hx, hy, hx_old, hy_old, L)
-    h_matrices_dt = update_H(*h_matrices_dt, hx, hy, hx_old, hy_old, L)
-    h_matrices_2dt = update_H(*h_matrices_2dt, hx, hy, hx_old, hy_old, L)
-    f[i] = calculate_f_update_h(matrices, h_matrices, L, temp)
-    print("h_matrices_updated")
+    hx_old = h[0]
+    hy_old = h[0]
 
-    der_low = (calculate_f_update_h(matrices_dt, h_matrices_dt, L, temp + dt) - f[i]) / dt
-    der_high = (calculate_f_update_h(matrices_2dt, h_matrices_2dt, L, temp + 2 * dt) - calculate_f_update_h(matrices_dt, h_matrices_dt,  L, temp + dt))/dt 
-    u[i] = der_low
-    cv[i] = (der_high - der_low)/dt
-    print("cv_calculated")
+    for j in range(1):
+        for i in range(n):
+            print(j)
+            hx = h[i]
+            hy = h[i]
+            
+            h_matrices = update_H(*h_matrices, hx, hy, hx_old, hy_old, L)
+            h_matrices_dt = update_H(*h_matrices_dt, hx, hy, hx_old, hy_old, L)
+            h_matrices_2dt = update_H(*h_matrices_2dt, hx, hy, hx_old, hy_old, L)
+            f[i] = calculate_f_update_h(matrices, h_matrices, L, temp)
+            print("h_matrices_updated")
 
-    hx_old = hx
-    hy_old = hy
-    
+            der_low = (calculate_f_update_h(matrices_dt, h_matrices_dt, L, temp + dt) - f[i]) / dt
+            der_high = (calculate_f_update_h(matrices_2dt, h_matrices_2dt, L, temp + 2 * dt) - calculate_f_update_h(matrices_dt, h_matrices_dt,  L, temp + dt))/dt 
+            u[i] = der_low
+            cv[i] = (der_high - der_low)/dt
+            print("cv_calculated")
 
-    
+            hy_old = hy
+            hx_old = hx
+        
+    #wyk.imshow(cv)
+        
+    wyk.plot(h * 2, cv, label = f"{temp}")
 
-wyk.plot(h * 2, cv)
-wyk.plot(h * 2, u)
 
+'''
+temps = [0.8, 1.3, 1.8, 2.1, 5]
+
+for i in temps:
+    plot_cv(i)
+'''
+
+
+def imshow_h(temp):
+    n = 20
+    cv = np.zeros(shape = (n, n))
+    f = np.zeros(shape = (n, n))
+    u = np.zeros(shape = (n, n))
+    start = -50
+    stop = 50
+    h = np.linspace(start, stop, n)
+    dt = 0.01
+
+    hx= h[0]
+    hy= h[0]
+
+    beta = 1/(k*temp)
+    matrices = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+    h_matrices = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
+
+    beta = 1/(k*(temp+dt))
+    matrices_dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+    h_matrices_dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
+
+    beta = 1/(k*(temp+2*dt))
+    matrices_2dt = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
+    h_matrices_2dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
+
+
+    hx_old = h[0]
+    hy_old = h[0]
+
+    for j in range(n):
+        print(j)
+        for i in range(n):
+            hx = h[j]
+            hy = h[i]
+            
+            h_matrices = update_H(*h_matrices, hx, hy, hx_old, hy_old, L)
+            h_matrices_dt = update_H(*h_matrices_dt, hx, hy, hx_old, hy_old, L)
+            h_matrices_2dt = update_H(*h_matrices_2dt, hx, hy, hx_old, hy_old, L)
+            f[j, i] = calculate_f_update_h(matrices, h_matrices, L, temp)
+            print("h_matrices_updated")
+
+            der_low = (calculate_f_update_h(matrices_dt, h_matrices_dt, L, temp + dt) - f[j, i]) / dt
+            der_high = (calculate_f_update_h(matrices_2dt, h_matrices_2dt, L, temp + 2 * dt) - calculate_f_update_h(matrices_dt, h_matrices_dt,  L, temp + dt))/dt 
+            u[j, i] = der_low
+            cv[j, i] = (der_high - der_low)/dt
+            print("cv_calculated")
+
+            hy_old = hy
+            hx_old = hx
+        
+    #wyk.imshow(cv)
+        
+    wyk.imshow(cv)
+
+imshow_h(10)
 
 plt.show()
