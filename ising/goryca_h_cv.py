@@ -47,25 +47,21 @@ def calculate_f_update_h(matrices, h_matrices, L, temp):
     Transfer_matrix = sla.LinearOperator((2**L, 2**L), matvec = lambda v: vector_multiplication(v, L, *matrices, *h_matrices))
     return k*temp*np.log(sla.eigs(Transfer_matrix, k=1, return_eigenvectors = False)[0]) 
 
-'''
-for i in range(n):
-    for j in range(n):
-        print(i, j)
-        f[i, j] = calculate_f(hy[i], hx[j], L, k, temp)
-'''
+
+
 
 def plot_cv(temp):
     n = 30
     cv = np.zeros(n)
     f = np.zeros(n)
     u = np.zeros(n)
-    start = -10
-    stop = 10
+    start = -6
+    stop = 6
     h = np.linspace(start, stop, n)
     dt = 0.05
 
-    hx= 0.01
-    hy= 0.01
+    hx= h[0]
+    hy= h[0]
 
     beta = 1/(k*temp)
     matrices = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
@@ -80,14 +76,14 @@ def plot_cv(temp):
     h_matrices_2dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
 
 
-    hx_old = 0.01
-    hy_old = 0.01
+    hx_old = hx
+    hy_old = hy
 
     for j in range(1):
         for i in range(n):
             print(j)
-            hx = 0.01
-            hy = 0.01
+            hx = 10
+            hy = h[i]
             
             h_matrices = update_H(*h_matrices, hx, hy, hx_old, hy_old, L)
             h_matrices_dt = update_H(*h_matrices_dt, hx, hy, hx_old, hy_old, L)
@@ -105,7 +101,6 @@ def plot_cv(temp):
             hx_old = hx
         
     #wyk.imshow(cv)
-        
     wyk.plot(h, cv, label = f"{temp}")
 
 temps = [0.8]
@@ -114,7 +109,7 @@ for i in temps:
     plot_cv(i)
 
 def imshow_h(temp):
-    n = 40
+    n = 30
     cv = np.zeros(shape = (n, n))
     f = np.zeros(shape = (n, n))
     u = np.zeros(shape = (n, n))

@@ -19,8 +19,8 @@ J = 1
 K = 1
 kappa = 0.6
 kappa_1 = 0
-h = 0.01
-h1 = 0.01
+h = 10
+h1 = 1
 
 def calculate_f(temp, L, k):
     beta = 1/(k*temp)
@@ -39,7 +39,7 @@ def calculate_f_array(temp, L, k, h):
 
 k=1
 n = 30
-start = 0.4
+start = 0.3
 end = 5
 temps = np.linspace(start, end, n)
 
@@ -54,7 +54,7 @@ wyk = fig.add_subplot(121)
 wyk_cv = fig.add_subplot(122)
 wyk.plot(temps, f)
 
-h_array = [0.01]
+h_array = [10]
 for i in h_array:
     cheb = Chebyshev.interpolate(calculate_f_array, 30, domain = [start, end],args = (L, k, i))
     cheb_der = cheb.deriv(2)
