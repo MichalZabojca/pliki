@@ -31,8 +31,8 @@ def construct_transfer_matrix(L, K, kappa, kappa_1, beta, h, h1):
 
                 if (k % 2 == 1):
                     energy += - h * (snew[k] + sold[k])/2
-                    energy += (K * snew[k] * snew[(k+1) % L] + kappa * K * snew[k] * snew[(k + 2) % L]) / 2
-                    energy += (K * sold[k] * sold[(k+1) % L] + kappa * K * sold[k] * sold[(k + 2) % L]) / 2
+                    energy += (- K * snew[k] * snew[(k+1) % L] + kappa * K * snew[k] * snew[(k + 2) % L]) / 2
+                    energy += (- K * sold[k] * sold[(k+1) % L] + kappa * K * sold[k] * sold[(k + 2) % L]) / 2
                 if (k % 2 == 0):
                     energy += - h1 * (snew[k] + sold[k])/2
                     energy += (snew[k] * snew[(k+1) % L] + kappa_1 * K * snew[k] * snew[(k + 2) % L]) / 2
@@ -46,7 +46,7 @@ def construct_transfer_matrix(L, K, kappa, kappa_1, beta, h, h1):
                           
             # Left-up diagonal terms
             for k in range(1, L, 2): # sites k = 0, 1, ..., L-1
-                energy += K * sold[k] * snew[(k - 1) % L]
+                energy += - K * sold[k] * snew[(k - 1) % L]
                 energy += sold[k] * snew[(k + 1) % L]
 
             T[i, j] = np.exp(- beta * energy)
@@ -63,7 +63,7 @@ def horizontal(L, kappa, kappa_1, K, beta, h, h1):
         for j in range(L):
             if (j % 2 == 1):
                 en += -beta * h * a_bin[j]
-                en += beta * K * a_bin[j] * a_bin[(j + 1) % L] + kappa * beta * K * a_bin[j] * a_bin[(j + 2) % L]
+                en += -beta * K * a_bin[j] * a_bin[(j + 1) % L] + kappa * beta * K * a_bin[j] * a_bin[(j + 2) % L]
             if (j % 2 == 0):
                 en += - beta * h1 * a_bin[j]
                 en += beta * a_bin[j] * a_bin[(j + 1) % L] + kappa_1 * beta * K * a_bin[j] * a_bin[(j + 2) % L]
@@ -82,7 +82,7 @@ def horizontal_v2(L, kappa, kappa_1, K, beta, h, h1):
         en = 0
         for j in range(L):
             if (j % 2 == 1):
-                en += K * a_bin[j] * a_bin[(j + 1) % L] + kappa * K * a_bin[j] * a_bin[(j + 2) % L]
+                en += -K * a_bin[j] * a_bin[(j + 1) % L] + kappa * K * a_bin[j] * a_bin[(j + 2) % L]
             if (j % 2 == 0):
                 en += a_bin[j] * a_bin[(j + 1) % L] + kappa_1 * K * a_bin[j] * a_bin[(j + 2) % L]
         T[a, a] = np.exp(- beta * en / 2)
@@ -125,11 +125,11 @@ def create_T(L, kappa, kappa_1, K, beta):
         a_bin = a_bin * 2 - 1
         i_bin = i_bin * 2 - 1
         
-        T[i, a] = np.exp(- kappa * beta * K * i_bin[0] * a_bin[0] - beta * i_bin[0] * a_bin[-1] - beta * K * i_bin[0] * a_bin[1])
+        T[i, a] = np.exp(-kappa * beta * K * i_bin[0] * a_bin[0] - beta * i_bin[0] * a_bin[-1] + beta * K * i_bin[0] * a_bin[1])
         a = a ^ (1 << (L-1))
         a_bin[0] *= -1
 
-        T[i, a] = np.exp(- kappa * beta * K * i_bin[0] * a_bin[0] - beta * i_bin[0] * a_bin[-1] - beta * K * i_bin[0] * a_bin[1])
+        T[i, a] = np.exp(-kappa * beta * K * i_bin[0] * a_bin[0] - beta * i_bin[0] * a_bin[-1] + beta * K * i_bin[0] * a_bin[1])
         
     return T
 
@@ -175,20 +175,30 @@ def reverse(L):
         P[a, i] = 1
     return P
 
+
+def negate(L):
+    N = lil_matrix((2**L, 2**L))
+    for i in range(2**L):
+        for j in range(L):
+            if (j % 2 == 1):
+                a = i ^ (1 << j)
+        N[a, i] = 1
+    return N
+
     
+'''
 fmt = 'csr'
-L = 4 
-kappa = 0.6
-kappa_1 = 0.5
-K = 1.1
-beta = 1.8
+L = 2
+kappa = 0
+kappa_1 = 0
+K = 1
+beta = 15
 
 
 B = 1
 phi = np.pi/4
-h = 3
-h1 = -4
-
+h = -5
+h1 = -6
 
 
 
@@ -220,15 +230,43 @@ for i in range(int(L / 2 - 1)):
 
 print("after for loop")
 
-Trans = H1 @ H @ Dh_2 @ P @ T_single @ P1 @ Trans @ H1 @ H @ Dh_2
+Trans_final = H1 @ H @ Dh_2 @ P @ T_single @ P1 @ Trans @ H1 @ H @ Dh_2
 
 T_reference = construct_transfer_matrix(L, K, kappa, kappa_1, beta, h, h1)
 
+
 print("created Trans")
 
-print(np.allclose(T_reference, Trans.todense()))
+print(np.allclose(T_reference, Trans_final.todense()))
 
-#print(T_reference, "\n", Trans.todense())
+
+H_1 = horizontal_h(L, beta, h, h1)
+H1_1 = horizontal_h1(L, beta, h, h1)
+
+h1 =  6
+
+H = horizontal_h(L, beta, h, h1)
+H1 = horizontal_h1(L, beta, h, h1)
+
+N = negate(L)
+
+print(H1_1.todense())
+print(H1.todense())
+
+print(np.allclose((N @ H1_1 @ N).todense(), H1.todense()))
+print(np.allclose((N @ H_1 @ N).todense(), H.todense()))
+
+Trans_1 = H1_1 @ H @ Dh_2 @ P @ T_single @ P1 @ Trans @ H1_1 @ H @ Dh_2
+Trans = N @ H1 @ H @ Dh_2 @ P @ T_single @ P1 @ Trans @ H1 @ H @ Dh_2 @ N
+
+print(N.todense())
+print(np.allclose(Trans_1.todense(), Trans.todense()))
+print(Trans.todense())
+print(Trans_1.todense())
+'''
+
+
+
 
 
 def update_matrices(L, kappa, kappa_1, K, beta, h, h1):
@@ -280,8 +318,3 @@ def update_H(H_h, H_h1, new_h, new_h1, old_h, old_h1, L):
     return H_h, H_h1
 
 
-v = np.zeros(2 ** L)
-for i in range(2 ** L):
-    v[i] = i
-
-print(np.allclose(vector_multiplication(v, L, T, T_single, Dh_2, P, P1, R, Trans_2_site, H, H1), T_reference @ v))

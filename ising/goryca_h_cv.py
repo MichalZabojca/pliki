@@ -18,7 +18,7 @@ from goryca import vector_multiplication, update_matrices, update_H, horizontal_
 L = 4
 J = 1
 K = 1
-kappa = 0
+kappa = 0.6
 kappa_1 = 0
 
 
@@ -59,13 +59,13 @@ def plot_cv(temp):
     cv = np.zeros(n)
     f = np.zeros(n)
     u = np.zeros(n)
-    start = -20
-    stop = 20
+    start = -10
+    stop = 10
     h = np.linspace(start, stop, n)
     dt = 0.05
 
-    hx= h[0]
-    hy= h[0]
+    hx= 0.01
+    hy= 0.01
 
     beta = 1/(k*temp)
     matrices = update_matrices(L, kappa, kappa_1, K, beta, hx, hy)[:-2]
@@ -80,14 +80,14 @@ def plot_cv(temp):
     h_matrices_2dt = horizontal_h(L, beta, hx, hy), horizontal_h1(L, beta, hx, hy)
 
 
-    hx_old = h[0]
-    hy_old = h[0]
+    hx_old = 0.01
+    hy_old = 0.01
 
     for j in range(1):
         for i in range(n):
             print(j)
-            hx = h[i]
-            hy = h[i]
+            hx = 0.01
+            hy = 0.01
             
             h_matrices = update_H(*h_matrices, hx, hy, hx_old, hy_old, L)
             h_matrices_dt = update_H(*h_matrices_dt, hx, hy, hx_old, hy_old, L)
@@ -98,7 +98,7 @@ def plot_cv(temp):
             der_low = (calculate_f_update_h(matrices_dt, h_matrices_dt, L, temp + dt) - f[i]) / dt
             der_high = (calculate_f_update_h(matrices_2dt, h_matrices_2dt, L, temp + 2 * dt) - calculate_f_update_h(matrices_dt, h_matrices_dt,  L, temp + dt))/dt 
             u[i] = der_low
-            cv[i] = (der_high - der_low)/dt
+            cv[i] = (der_high - der_low)/dt 
             print("cv_calculated")
 
             hy_old = hy
@@ -106,24 +106,20 @@ def plot_cv(temp):
         
     #wyk.imshow(cv)
         
-    wyk.plot(h * 2, cv, label = f"{temp}")
+    wyk.plot(h, cv, label = f"{temp}")
 
-
-'''
-temps = [0.8, 1.3, 1.8, 2.1, 5]
+temps = [0.8]
 
 for i in temps:
     plot_cv(i)
-'''
-
 
 def imshow_h(temp):
-    n = 20
+    n = 40
     cv = np.zeros(shape = (n, n))
     f = np.zeros(shape = (n, n))
     u = np.zeros(shape = (n, n))
-    start = -50
-    stop = 50
+    start = -10
+    stop = 10
     h = np.linspace(start, stop, n)
     dt = 0.01
 
@@ -171,6 +167,6 @@ def imshow_h(temp):
         
     wyk.imshow(cv)
 
-imshow_h(10)
+#imshow_h(1)
 
 plt.show()
