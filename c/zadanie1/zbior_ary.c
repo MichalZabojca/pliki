@@ -11,6 +11,22 @@ typedef struct zbior_ary {
     int *k;
 } zbior_ary;
 
+int min(int a, int b){
+    if (a <= b) return a;
+    else return b;
+}
+
+int max(int a, int b){
+    if (a >= b) return a;
+    else return b;
+}
+
+int modulo(int x) {
+    int r = x % q;
+    if (r < 0) r += q;
+    return r;
+}
+
 zbior_ary nowy_zbior(int rozmiar) {
     int *p = (int *)malloc(sizeof(int) * (size_t)rozmiar);
     if (p == NULL) {
@@ -33,18 +49,20 @@ zbior_ary nowy_zbior(int rozmiar) {
 
 void zbior_push(zbior_ary *A, int nowy_p, int nowy_k) {
     if (A->uzyte == A->rozmiar) {
-        int *p_r = realloc(A->p, sizeof(int) * (size_t)((A->rozmiar) * 2));
+        int *p_r = (int *)realloc(A->p, sizeof(int) * (size_t)((A->rozmiar) * 2));
         if (p_r == NULL) {
             exit(1);
         }
 
-        int *k_r = realloc(A->k, sizeof(int) * (size_t)((A->rozmiar) * 2));
+        int *k_r = (int *)realloc(A->k, sizeof(int) * (size_t)((A->rozmiar) * 2));
         if (k_r == NULL) {
             exit(1);
         }
 
         A->p = p_r;
         A->k = k_r;
+            if (r < 0) r += q;
+                return r;
         A->rozmiar *= 2;
     }
     *(A->p + A->uzyte) = nowy_p;
@@ -65,87 +83,74 @@ zbior_ary singleton(int a) {
     return A;
 }
 
-void pierwszy_przedzial(int *nowy_p, int *nowy_k, zbior_ary *A, zbior_ary *B,
-                        int *a, int *b) {
-    if (B->uzyte <= *b && A->uzyte <= *a) {
-        return;
-    }
-
-    if (B->uzyte <= *b && A->uzyte > *a) {
-        *nowy_p = A->p[*a];
-        *nowy_k = A->k[*a];
-        (*a)++;
-        return;
-    }
-
-    if (A->uzyte <= *a && B->uzyte > *b) {
-        *nowy_p = B->p[*b];
-        *nowy_k = B->k[*b];
-        (*b)++;
-        return;
-    }
-
-    if (A->p[*a] % q > B->p[*b] % q) {
-        *nowy_p = B->p[*b];
-        *nowy_k = B->k[*b];
-        (*b)++;
-        return;
-    }
-
-    if (B->p[*b] % q > A->p[*a] % q) {
-        *nowy_p = A->p[*a];
-        *nowy_k = A->k[*a];
-        (*a)++;
-        return;
-    }
-
-    if (B->p[*b] <= A->p[*a]) {
-        *nowy_p = B->p[*b];
-        *nowy_k = B->k[*b];
-        (*b)++;
-        return;
-    }
-
-    if (B->p[*b] > A->p[*a]) {
-        *nowy_p = A->p[*a];
-        *nowy_k = A->k[*a];
-        (*a)++;
-        return;
-    }
-
-    return;
-}
 
 zbior_ary suma(zbior_ary A, zbior_ary B) {
-    int a = 0, b = 0, nowy_p, nowy_k;
+    int a = 0, b = 0, nowy_p = 0, nowy_k = 0;
     zbior_ary C = nowy_zbior(A.rozmiar);
+    
+    if (A.uzyte == 0) return B;
+    if (B.uzyte == 0) return A;
+    
+    if (A.p[a] <= B.p[b]){
+        nowy_p = A.p[a];
+        nowy_k = A.k[a];
+        a++;
+    }
 
-    pierwszy_przedzial(&nowy_p, &nowy_k, &A, &B, &a, &b);
-    a = 0;
-    b = 0;
-    while (b < B.uzyte || a < A.uzyte) {
-        pierwszy_przedzial(&nowy_p, &nowy_k, &A, &B, &a, &b);
+    else {
+        nowy_p = B.p[b];
+        nowy_k = B.k[b];
+        b++;
+    }
 
-        fflush(stdout);
-        while ((b < B.uzyte && B.p[b] % q == nowy_p % q && nowy_k >= B.p[b]) ||
-               (a < A.uzyte && A.p[a] % q == nowy_p % q && nowy_k >= A.p[a])) {
-            while (b < B.uzyte && nowy_k >= B.p[b] &&
-                   B.p[b] % q == nowy_p % q) {
-                if (B.k[b] > nowy_k) {
-                    nowy_k = B.k[b];
-                }
-                b++;
+    while (b < B.uzyte && a < A.uzyte) {
+
+        if (modulo(A.p[a]) < modulo(B.p[b])){
+            zbior_push(&C, A.p[a], A.k[a]);
+            a++;
+            continue;
+        }
+        else if (modulo(B.p[b]) < modulo(A.p[a])){
+            zbior_push(&C, B.p[b], B.k[b]);
+            b++;
+            continue;
+        }
+
+        if (A.p[a] <= B.p[b]){
+            nowy_p = A.p[a];
+            nowy_k = A.k[a];
+            a++;
+        }
+
+        else {
+            nowy_p = B.p[b];
+            nowy_k = B.k[b];
+            b++;
+        }
+
+
+        while ((a < A.uzyte && modulo(A.p[a]) == modulo(nowy_p) && A.p[a] <= nowy_k + q) || (b < B.uzyte && modulo(B.p[b]) == modulo(nowy_p) && B.p[b] <= nowy_k + q)){
+            while (a < A.uzyte && modulo(A.p[a]) == modulo(nowy_p) && A.p[a] <= nowy_k + q){ 
+                nowy_k = max(A.k[a], nowy_k);
+                a++;
             }
 
-            while (a < A.uzyte && nowy_k >= A.p[a] &&
-                   A.p[a] % q == nowy_p % q) {
-                if (A.k[a] > nowy_k) {
-                    nowy_k = A.k[a];
-                }
-                a++;
+            while (b < B.uzyte && modulo(B.p[b]) == modulo(nowy_p) && B.p[b] <= nowy_k + q){ 
+                nowy_k = max(B.k[b], nowy_k);
+                b++;
             }
         }
         zbior_push(&C, nowy_p, nowy_k);
+    }
+
+    while (a < A.uzyte){
+        zbior_push(&C, A.p[a], A.k[a]);
+        a++;
+    }
+
+    while (b < B.uzyte){
+        zbior_push(&C, B.p[b], B.k[b]);
+        b++;
     }
 
     return C;
@@ -155,37 +160,18 @@ zbior_ary iloczyn(zbior_ary A, zbior_ary B) {
     int a = 0, b = 0, nowy_p, nowy_k;
     zbior_ary C = nowy_zbior(A.rozmiar);
 
-    pierwszy_przedzial(&nowy_p, &nowy_k, &A, &B, &a, &b);
-    a = 0;
-    b = 0;
-
-    while (b < B.uzyte || a < A.uzyte) {
-        pierwszy_przedzial(&nowy_p, &nowy_k, &A, &B, &a, &b);
-
-        while ((b < B.uzyte && B.p[b] % q == nowy_p % q && nowy_k >= B.p[b]) ||
-               (a < A.uzyte && A.p[a] % q == nowy_p % q && nowy_k >= A.p[a])) {
-            while (b < B.uzyte && nowy_k >= B.p[b] &&
-                   B.p[b] % q == nowy_p % q) {
-                if (B.k[b] > nowy_k) {
-                    zbior_push(&C, B.p[b], nowy_k);
-                    nowy_k = B.k[b];
-                } else {
-                    zbior_push(&C, B.p[b], B.k[b]);
-                }
-                b++;
-            }
-            while (a < A.uzyte && nowy_k >= A.p[a] &&
-                   A.p[a] % q == nowy_p % q) {
-                if (A.k[a] > nowy_k) {
-                    zbior_push(&C, A.p[a], nowy_k);
-                    nowy_k = A.k[a];
-                } else {
-                    zbior_push(&C, A.p[a], A.k[a]);
-                }
-                a++;
-            }
+    while (b < B.uzyte && a < A.uzyte){
+        if (modulo(B.p[b]) < modulo(A.p[a])) b++;
+        else if (modulo(B.p[b]) > modulo(A.p[a])) a++;
+        if (modulo(A.p[a]) == modulo(B.p[b])){
+            nowy_p = max(A.p[a], B.p[b]);
+            nowy_k = mina(A.k[a], B.k[b]);
+            if (nowy_k >= nowy_p) zbior_push(&C, nowy_p, nowy_k);
+            if (A.k[a] >= B.k[b]) b++;
+            else a++;
         }
     }
+
     return C;
 }
 
@@ -193,46 +179,18 @@ zbior_ary roznica(zbior_ary A, zbior_ary B) {
     int a = 0, b = 0, nowy_k = 0;
     zbior_ary C = nowy_zbior(A.rozmiar);
 
-    while (b < B.uzyte) {
-        while (A.p[a] % q < B.p[b] % q && A.uzyte > a) {
-            zbior_push(&C, A.p[a], A.k[a]);
-            a++;
-        }
-
-        while (A.p[a] % q > B.p[b] % q && B.uzyte > b) {
+    while (a < A.uzyte){
+        nowy_p = A.p[a];
+        nowy_k = A.k[a];
+        while (b < B.uzyte && modulo(B.p[b]) < modulo(A.p[a])) b++;
+        while (b < B.uzyte && modulo(B.p[b]) == modulo(nowy_p) && B.p[b] <= nowy_k && nowy_p <= nowy_k){
+            if (B.k[b] > nowy_p){
+                zbior_push(&C, nowy_p, B.p[b] - q);
+            }
+            nowy_p = max(nowy_p, B.k[b] + q);
             b++;
         }
-
-        while (A.p[a] % q == B.p[b] % q && A.uzyte > a && B.uzyte > b) {
-            nowy_k = A.p[a];
-
-            if (B.k[b] >= A.p[a] && B.p[b] <= A.p[a]) {
-                nowy_k = B.k[b] + q;
-                b++;
-            }
-            while (B.p[b] - nowy_k > q && B.k[b] <= A.k[a] && B.uzyte > b) {
-                zbior_push(&C, nowy_k, B.p[b] - q);
-                nowy_k = B.k[b] + q;
-                b++;
-            }
-            if (B.p[b] <= A.k[a] && B.k[b] >= A.k[a] && a < A.uzyte &&
-                B.p[b] - nowy_k > q) {
-                zbior_push(&C, nowy_k, B.p[b]);
-                a++;
-            }
-            if (B.p[b] > A.k[a] && A.k[a] - nowy_k > q && a < A.uzyte) {
-                zbior_push(&C, nowy_k, A.k[a]);
-                a++;
-            }
-        }
-        while (a < A.uzyte) {
-            if (nowy_k >= A.p[a] && nowy_k <= A.k[a]) {
-                zbior_push(&C, nowy_k, A.k[a]);
-                a++;
-                continue;
-            }
-            zbior_push(&C, A.p[a], A.k[a]);
-        }
+        if (nowy_p <= nowy_k) zbior_push(&C, nowy_p, nowy_k);
     }
 
     return C;
